@@ -32,5 +32,16 @@ def get_tokens():
         with open(TOKENS_FILE, "r", encoding="utf-8") as f:
             tokens = json.load(f)
     except FileNotFoundError:
-        tokens =
+        tokens = []
+    return JSONResponse(tokens)
+
+@app.post("/analyses_history")
+async def save_analyses_history(request: Request):
+    """
+    Enregistre l'historique des analyses envoyée par le PumpFun bot.
+    """
+    analyses = await request.json()
+    with open(ANALYSIS_HISTORY_FILE, "w", encoding="utf-8") as f:
+        json.dump(analyses, f, ensure_ascii=False, indent=2)
+    return JSONResponse({"status": "success", "message": "Anal
 
