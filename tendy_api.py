@@ -35,6 +35,18 @@ def get_tokens():
         tokens = []
     return JSONResponse(tokens)
 
+@app.get("/show_tokens")
+def show_tokens():
+    """
+    Affiche le contenu brut de tokens.json (pour vérification Render).
+    """
+    try:
+        with open(TOKENS_FILE, "r", encoding="utf-8") as f:
+            content = f.read()
+        return JSONResponse(content)
+    except FileNotFoundError:
+        return JSONResponse({"error": "Tokens file not found"}, status_code=404)
+
 @app.post("/analyses_history")
 async def save_analyses_history(request: Request):
     """
