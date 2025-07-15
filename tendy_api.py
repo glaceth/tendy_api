@@ -17,7 +17,7 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 MORALIS_API_KEY = os.getenv("MORALIS_API_KEY")
 
 # Adresse du bot PumpFun (à adapter selon ton déploiement)
-PUMPFUN_BOT_URL = os.getenv("PUMPFUN_BOT_URL", "http://localhost:9000")
+PUMPFUN_BOT_URL = os.getenv("https://pumpfun-bot-1.onrender.com", "http://localhost:9000")
 
 def load_tokens():
     if os.path.exists(TOKENS_FILE):
