@@ -15,12 +15,25 @@ def root():
 
 @app.post("/tokens")
 async def save_tokens(request: Request):
-    tokens = await request.json()
-    print("Tokens reçus :", tokens)
+    new_tokens = await request.json()
+    print("Nouveaux tokens reçus :", new_tokens)
+    # Lire l’existant
+    try:
+        with open(TOKENS_FILE, "r", encoding="utf-8") as f:
+            tokens = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        tokens = []
+    # Ajout intelligent (ne pas dupliquer)
+    token_addresses = {t["token_address"] for t in tokens}
+    for nt in new_tokens:
+        if nt["token_address"] not in token_addresses:
+            tokens.append(nt)
+            token_addresses.add(nt["token_address"])
+    # Sauver la liste complète
     with open(TOKENS_FILE, "w", encoding="utf-8") as f:
         json.dump(tokens, f, ensure_ascii=False, indent=2)
-    print("tokens.json sauvegardé.")
-    return JSONResponse({"status": "success", "message": "Tokens sauvegardés."})
+    print("tokens.json mis à jour.")
+    return JSONResponse({"status": "success", "message": "Tokens ajoutés."})
 
 @app.get("/tokens")
 def get_tokens():
