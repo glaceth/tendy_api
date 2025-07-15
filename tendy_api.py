@@ -16,6 +16,9 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 MORALIS_API_KEY = os.getenv("MORALIS_API_KEY")
 
+# Adresse du bot PumpFun (à adapter selon ton déploiement)
+PUMPFUN_BOT_URL = os.getenv("PUMPFUN_BOT_URL", "http://localhost:9000")
+
 def load_tokens():
     if os.path.exists(TOKENS_FILE):
         with open(TOKENS_FILE, "r", encoding="utf-8") as f:
@@ -125,6 +128,19 @@ async def receive_token(request: Request):
 @app.get("/tokens")
 def get_tokens():
     return load_tokens()
+
+@app.post("/scan_tokens")
+def trigger_scan_tokens():
+    """
+    Déclenche une demande de scan des tokens côté bot PumpFun.
+    Le bot doit exposer une route /scan_tokens qui lance le scan.
+    """
+    url = f"{PUMPFUN_BOT_URL}/scan_tokens"
+    try:
+        response = requests.post(url)
+        return {"status": "scan_triggered", "bot_response": response.text}
+    except Exception as e:
+        return {"status": "error", "detail": str(e)}
 
 # Tâche périodique d'analyse
 def periodic_analysis():
