@@ -43,7 +43,8 @@ def show_tokens():
     try:
         with open(TOKENS_FILE, "r", encoding="utf-8") as f:
             content = f.read()
-        return JSONResponse(content)
+        # Pour afficher tel quel dans la réponse JSON, on retourne un objet {"content": ...}
+        return JSONResponse({"content": content})
     except FileNotFoundError:
         return JSONResponse({"error": "Tokens file not found"}, status_code=404)
 
