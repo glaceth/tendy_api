@@ -152,6 +152,27 @@ def trigger_scan_tokens():
     except Exception as e:
         return {"status": "error", "detail": str(e)}
 
+# Endpoint racine pour éviter le 404 sur "/"
+@app.get("/")
+def root():
+    return JSONResponse({"status": "ok", "message": "Tendy API is running."})
+
+# Endpoint pour obtenir les infos d'un token particulier
+@app.get("/token_info")
+def token_info(address: str):
+    """Retourne les infos d'un token spécifique (address)"""
+    moralis = get_moralis_data(address)
+    rugcheck = get_rugcheck_data(address)
+    if moralis and rugcheck:
+        data = {**moralis, **rugcheck}
+    elif moralis:
+        data = moralis
+    elif rugcheck:
+        data = rugcheck
+    else:
+        data = {}
+    return JSONResponse(data)
+
 # Tâche périodique d'analyse
 def periodic_analysis():
     while True:
