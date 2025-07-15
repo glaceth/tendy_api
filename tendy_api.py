@@ -6,8 +6,6 @@ import json
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from analyze_with_gpt import analyze_token_with_gpt
-
 app = FastAPI()
 TOKENS_FILE = "tokens.json"
 ANALYSIS_HISTORY_FILE = "analyses_history.json"
@@ -16,8 +14,20 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 MORALIS_API_KEY = os.getenv("MORALIS_API_KEY")
 
-# Adresse du bot PumpFun (à adapter selon ton déploiement)
-PUMPFUN_BOT_URL = os.getenv("https://pumpfun-bot-1.onrender.com", "http://localhost:9000")
+# Adresse du bot PumpFun GPT (externe)
+PUMPFUN_BOT_URL = os.getenv("PUMPFUN_BOT_URL", "https://pumpfun-bot-1.onrender.com")
+
+def analyze_token_with_gpt(summary):
+    url = f"{PUMPFUN_BOT_URL}/analyze"
+    try:
+        response = requests.get(url, params={"token": summary}, timeout=30)
+        if response.status_code == 200:
+            res = response.json()
+            return res.get("analysis", "Pas de résultat GPT.")
+        else:
+            return f"Erreur GPT bot: {response.text}"
+    except Exception as e:
+        return f"Erreur GPT bot: {e}"
 
 def load_tokens():
     if os.path.exists(TOKENS_FILE):
