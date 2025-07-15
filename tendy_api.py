@@ -44,4 +44,35 @@ async def save_analyses_history(request: Request):
     with open(ANALYSIS_HISTORY_FILE, "w", encoding="utf-8") as f:
         json.dump(analyses, f, ensure_ascii=False, indent=2)
     return JSONResponse({"status": "success", "message": "Analyses sauvegardées."})
-
+
+@app.get("/analyses_history")
+def get_analyses_history():
+    """
+    Récupère l'historique des analyses pour le Tendy bot.
+    """
+    try:
+        with open(ANALYSIS_HISTORY_FILE, "r", encoding="utf-8") as f:
+            analyses = json.load(f)
+    except FileNotFoundError:
+        analyses = {}
+    return JSONResponse(analyses)
+
+@app.get("/token_info")
+def get_token_info(address: str):
+    """
+    Récupère les infos d'un token précis (par son address).
+    """
+    try:
+        with open(TOKENS_FILE, "r", encoding="utf-8") as f:
+            tokens = json.load(f)
+    except FileNotFoundError:
+        return JSONResponse({"error": "Tokens file not found"}, status_code=404)
+
+    for token in tokens:
+        if token.get("token_address") == address:
+            return JSONResponse(token)
+    return JSONResponse({"error": "Token not found"}, status_code=404)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("tendy_api:app", host="0.0.0.0", port=8000, reload=True)
