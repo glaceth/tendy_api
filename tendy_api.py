@@ -43,5 +43,5 @@ async def save_analyses_history(request: Request):
     analyses = await request.json()
     with open(ANALYSIS_HISTORY_FILE, "w", encoding="utf-8") as f:
         json.dump(analyses, f, ensure_ascii=False, indent=2)
-    return JSONResponse({"status": "success", "message": "Anal
+    return JSONResponse({"status": "success", "message": "Analyses sauvegardées."})
 
