@@ -1,48 +1,64 @@
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
-import uvicorn
 import os
 import requests
+import time
+import threading
+import json
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 
-from analyze_with_gpt import analyze_token_with_gpt  # Assure-toi que le chemin d'import est correct
+from analyze_with_gpt import analyze_token_with_gpt
 
 app = FastAPI()
-TOKENS = []  # Stockage temporaire en mémoire
+TOKENS_FILE = "tokens.json"
 
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")      # Ton token Telegram Tendy
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")  # Ton chat Tendy
+def load_tokens():
+    if os.path.exists(TOKENS_FILE):
+        with open(TOKENS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return []
 
-def send_telegram_message(text):
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": text, "parse_mode": "Markdown"}
-    requests.post(url, json=payload, timeout=10)
-
-def make_summary(token_data):
-    return (
-        f"Nom: {token_data.get('name')}\n"
-        f"Ticker: {token_data.get('symbol')}\n"
-        f"Market Cap: {token_data.get('mc')}\n"
-        f"Holders: {token_data.get('holders')}\n"
-        f"Rugscore: {token_data.get('rugscore')}\n"
-        f"Honeypot: {token_data.get('honeypot')}\n"
-        f"LP Locked: {token_data.get('lp_locked')}\n"
-        f"Top Holders: {token_data.get('top_holders')}\n"
-        f"Timestamp: {token_data.get('timestamp')}\n"
-    )
+def save_tokens(tokens):
+    with open(TOKENS_FILE, "w", encoding="utf-8") as f:
+        json.dump(tokens, f, ensure_ascii=False, indent=2)
 
 @app.post("/new_token")
 async def receive_token(request: Request):
     token_data = await request.json()
-    TOKENS.append(token_data)
-    summary = make_summary(token_data)
-    analysis = analyze_token_with_gpt(summary)
-    message = f"🧠 Analyse GPT pour {token_data.get('symbol', '?')} ({token_data.get('token_address')}):\n{analysis}"
-    send_telegram_message(message)
-    return JSONResponse({"status": "success", "received": token_data, "gpt_analysis": analysis})
+    tokens = load_tokens()
+    # Ajout sans doublon
+    if not any(t.get('token_address') == token_data.get('token_address') for t in tokens):
+        tokens.append(token_data)
+        save_tokens(tokens)
+    return JSONResponse({"status": "success", "received": token_data})
 
 @app.get("/tokens")
 def get_tokens():
-    return TOKENS
+    return load_tokens()
 
-if __name__ == "__main__":
-    uvicorn.run("tendy_api:app", host="0.0.0.0", port=8000, reload=True)
+# Tâche périodique d'analyse
+def periodic_analysis():
+    while True:
+        tokens = load_tokens()
+        for token in tokens:
+            # Ici tu peux re-fetch les données live via Moralis/RugCheck...
+            # Par exemple:
+            # updated_data = get_latest_data(token["token_address"])
+            # token.update(updated_data)
+            summary = (
+                f"Nom: {token.get('name')}\n"
+                f"Ticker: {token.get('symbol')}\n"
+                f"Market Cap: {token.get('mc')}\n"
+                f"Holders: {token.get('holders')}\n"
+                f"Rugscore: {token.get('rugscore')}\n"
+                f"Honeypot: {token.get('honeypot')}\n"
+                f"LP Locked: {token.get('lp_locked')}\n"
+                f"Top Holders: {token.get('top_holders')}\n"
+                f"Timestamp: {token.get('timestamp')}\n"
+            )
+            analysis = analyze_token_with_gpt(summary)
+            # Envoie sur Telegram ou stocke l'analyse
+            # send_telegram_message(f"🧠 Update GPT pour {token.get('symbol')}:\n{analysis}")
+        time.sleep(300)  # 5 minutes
+
+# Démarrage de la tâche périodique
+threading.Thread(target=periodic_analysis, daemon=True).start()
