@@ -17,19 +17,16 @@ def root():
 async def save_tokens(request: Request):
     new_tokens = await request.json()
     print("Nouveaux tokens reçus :", new_tokens)
-    # Lire l’existant
     try:
         with open(TOKENS_FILE, "r", encoding="utf-8") as f:
             tokens = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         tokens = []
-    # Ajout intelligent (ne pas dupliquer)
-    token_addresses = {t["token_address"] for t in tokens}
+    token_addresses = {t["token_address"] for t in tokens if isinstance(t, dict)}
     for nt in new_tokens:
-        if nt["token_address"] not in token_addresses:
+        if isinstance(nt, dict) and nt.get("token_address") not in token_addresses:
             tokens.append(nt)
             token_addresses.add(nt["token_address"])
-    # Sauver la liste complète
     with open(TOKENS_FILE, "w", encoding="utf-8") as f:
         json.dump(tokens, f, ensure_ascii=False, indent=2)
     print("tokens.json mis à jour.")
@@ -48,9 +45,6 @@ def get_tokens():
 
 @app.get("/show_tokens")
 def show_tokens():
-    """
-    Affiche le contenu brut de tokens.json (pour vérification Render).
-    """
     try:
         with open(TOKENS_FILE, "r", encoding="utf-8") as f:
             content = f.read()
@@ -80,6 +74,7 @@ def get_analyses_history():
         print("Fichier analyses_history.json introuvable")
     return JSONResponse(analyses)
 
+# PATCH: Supporte objets OU strings pour tokens.json
 @app.get("/token_info")
 def get_token_info(address: str):
     try:
@@ -90,9 +85,14 @@ def get_token_info(address: str):
         print("Fichier tokens.json introuvable (token_info)")
         return JSONResponse({"error": "Tokens file not found"}, status_code=404)
     for token in tokens:
-        if token.get("token_address") == address:
-            print("Token trouvé :", token)
+        # Si token est un dict (objet JSON)
+        if isinstance(token, dict) and token.get("token_address") == address:
+            print("Token trouvé (dict):", token)
             return JSONResponse(token)
+        # Si token est une string (juste l'adresse)
+        elif isinstance(token, str) and token == address:
+            print("Token trouvé (str):", token)
+            return JSONResponse({"token_address": token})
     print("Token non trouvé :", address)
     return JSONResponse({"error": "Token not found"}, status_code=404)
 
