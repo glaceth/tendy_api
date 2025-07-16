@@ -1,5 +1,6 @@
 import os
 import json
+import requests
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
@@ -7,6 +8,20 @@ app = FastAPI()
 
 TOKENS_FILE = "tokens.json"
 ANALYSIS_HISTORY_FILE = "analyses_history.json"
+
+# URL du bot Flask déployé, à modifier si besoin
+FLASK_BOT_URL = "https://tendy-gpt-bot-70zp.onrender.com/new_token"
+
+def forward_token_to_flask(token_address):
+    payload = {"token": token_address}
+    try:
+        resp = requests.post(FLASK_BOT_URL, json=payload, timeout=5)
+        if resp.status_code == 200:
+            print(f"✅ Token forwardé à Flask bot : {token_address}")
+        else:
+            print(f"❌ Erreur forwarding {token_address} : {resp.status_code} {resp.text}")
+    except Exception as e:
+        print(f"❌ Exception forwarding {token_address} :", e)
 
 @app.get("/")
 def root():
@@ -27,6 +42,8 @@ async def save_tokens(request: Request):
         if isinstance(nt, dict) and nt.get("token_address") not in token_addresses:
             tokens.append(nt)
             token_addresses.add(nt["token_address"])
+            # Forward au bot Flask
+            forward_token_to_flask(nt["token_address"])
     with open(TOKENS_FILE, "w", encoding="utf-8") as f:
         json.dump(tokens, f, ensure_ascii=False, indent=2)
     print("tokens.json mis à jour.")
